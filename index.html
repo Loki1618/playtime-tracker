@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Playtime Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <!-- Headers will dynamically change based on view -->
+    <header id="main-header">
+      <h1 id="header-title">Roster</h1>
+      <button id="header-action-btn" class="icon-btn hidden"><span class="material-icons-round">add</span></button>
+    </header>
+
+    <main id="main-content">
+      <!-- Roster View -->
+      <section id="view-roster" class="view active">
+        <div class="empty-state" id="roster-empty">
+          <span class="material-icons-round mb-2" style="font-size: 48px; opacity: 0.5;">group</span>
+          <p>No players added yet.</p>
+          <button class="btn btn-primary mt-4" id="btn-add-first-player">Add Player</button>
+        </div>
+        <div id="roster-list" class="list-container"></div>
+      </section>
+
+      <!-- Games View -->
+      <section id="view-games" class="view">
+        <div id="games-list" class="list-container"></div>
+        <button class="btn btn-primary fab" id="btn-new-game" style="position:fixed; bottom: 80px; right: 20px;">
+          <span class="material-icons-round">sports_soccer</span> New Game
+        </button>
+      </section>
+      
+      <!-- Live Game Tracker View -->
+      <section id="view-live-game" class="view">
+        <div id="live-setup" class="setup-mode">
+           <h2 class="mb-2" style="font-size: 1.1rem">Select Starting Lineup</h2>
+           <p class="text-sec mb-2">Tap players to select them. Max depending on format (e.g., 7, 9, 11).</p>
+           <div id="live-setup-roster"></div>
+           <button class="btn btn-success mt-4 w-100" id="btn-start-match" style="width: 100%; display:none;">Start Match</button>
+        </div>
+        <div id="live-active" class="hidden">
+           <div class="timer-display">
+             <h2 id="match-timer">00:00</h2>
+             <button id="btn-toggle-timer" class="icon-btn" style="background:var(--primary-color);color:#fff;width:50px;height:50px;margin: 0 auto;">
+               <span class="material-icons-round" id="timer-icon">pause</span>
+             </button>
+           </div>
+           
+           <h3 class="section-title mt-4">On Field</h3>
+           <div id="active-players-grid" class="players-grid"></div>
+
+           <h3 class="section-title mt-4">Bench</h3>
+           <div id="bench-players-grid" class="players-grid"></div>
+
+           <button class="btn btn-danger w-100 mt-4" id="btn-end-match" style="width:100%;">End Match & Save</button>
+        </div>
+      </section>
+
+      <!-- Stats View -->
+      <section id="view-stats" class="view">
+         <div class="stats-overview">
+            <div class="stat-card">
+              <h3>Games Played</h3>
+              <p id="stat-games">0</p>
+            </div>
+            <div class="stat-card">
+              <h3>Total Goals</h3>
+              <p id="stat-goals">0</p>
+            </div>
+         </div>
+         <div id="stats-list" class="list-container mt-4"></div>
+      </section>
+    </main>
+
+    <nav id="bottom-nav">
+      <button class="nav-item active" data-target="view-roster">
+        <span class="material-icons-round">people</span>
+        <span>Roster</span>
+      </button>
+      <button class="nav-item" data-target="view-games">
+        <span class="material-icons-round">sports</span>
+        <span>Games</span>
+      </button>
+      <button class="nav-item" data-target="view-stats">
+        <span class="material-icons-round">bar_chart</span>
+        <span>Stats</span>
+      </button>
+    </nav>
+
+    <!-- Modals -->
+    <div id="modal-backdrop" class="modal-backdrop hidden"></div>
+    <div id="modal-player" class="modal hidden">
+      <h2 id="modal-player-title" class="mb-2">Add Player</h2>
+      <form id="form-player">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="input-player-name" required placeholder="e.g. Lionel Messi">
+        </div>
+        <div class="form-group">
+          <label>Number</label>
+          <input type="number" id="input-player-number" placeholder="e.g. 10">
+        </div>
+        <div class="form-group">
+          <label>Position (Optional)</label>
+          <input type="text" id="input-player-position" placeholder="e.g. Forward">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="btn-cancel-player">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Match Summary Modal -->
+    <div id="modal-match-summary" class="modal hidden">
+      <h2 class="mb-2">Match Finished!</h2>
+      <p class="text-sec mb-2">Review final statistics before saving.</p>
+      <div id="match-summary-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 16px;"></div>
+      <div class="modal-actions">
+          <button type="button" class="btn btn-text" id="btn-discard-match">Discard</button>
+          <button type="button" class="btn btn-success" id="btn-save-match">Save Match</button>
+      </div>
+    </div>
+  </div>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

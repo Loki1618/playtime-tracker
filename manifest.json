@@ -1,0 +1,17 @@
+{
+  "name": "Playtime Tracker",
+  "short_name": "Playtime",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "description": "Track player minutes automatically for Soccer",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzNiODJmNiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PHBhdGggZD0iTTEyIDJ2MjAvPjxwYXRoIGQ9Ik0xMiAxMmMtMy4zLTEuNS01LTMtNi04Ii8+PHBhdGggZD0iTTEyIDEyYzMuMy0xLjUgNS0zIDYtOCIvPjxwYXRoIGQ9Ik0xMiAxMmMtMy4zIDEuNS01IDMtNiA4Ii8+PHBhdGggZD0iTTEyIDEyYzMuMyAxLjUgNSAzIDYgOCIvPjwvc3ZnPg==",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
