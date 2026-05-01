@@ -5,7 +5,17 @@ const Store = {
   getPlayers: () => JSON.parse(localStorage.getItem('pt_players')) || [],
   savePlayers: (players) => localStorage.setItem('pt_players', JSON.stringify(players)),
   getGames: () => JSON.parse(localStorage.getItem('pt_games')) || [],
-  saveGames: (games) => localStorage.setItem('pt_games', JSON.stringify(games))
+  saveGames: (games) => localStorage.setItem('pt_games', JSON.stringify(games)),
+  getLiveGame: () => {
+    const game = JSON.parse(localStorage.getItem('pt_live_game'));
+    if (game) game.intervalId = null;
+    return game || null;
+  },
+  saveLiveGame: (game) => {
+    if (game) localStorage.setItem('pt_live_game', JSON.stringify(game));
+    else localStorage.removeItem('pt_live_game');
+  },
+  clearLiveGame: () => localStorage.removeItem('pt_live_game')
 };
 
 // State
@@ -13,7 +23,7 @@ const State = {
   currentView: 'view-roster',
   players: Store.getPlayers(),
   games: Store.getGames(),
-  liveGame: null // { id, startTime, matchTime, isRunning, intervalId, players: [{id, activeMatchTime, isActive, goals}] }
+  liveGame: Store.getLiveGame() // { id, startTime, matchTimeSeconds, isRunning, intervalId, lastTick, players: [...] }
 };
 
 // UI Elements
@@ -59,9 +69,33 @@ function init() {
   renderGames();
   renderStats();
   setupEventListeners();
+
+  if (State.liveGame && State.liveGame.isRunning) {
+    gameTick(); // Catch up on any missed time
+    State.liveGame.intervalId = setInterval(gameTick, 1000);
+  }
 }
 
 function setupEventListeners() {
+  // App State persistence
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      if (State.liveGame && State.liveGame.isRunning) gameTick();
+    } else {
+      if (State.liveGame) {
+        if (State.liveGame.isRunning) gameTick();
+        Store.saveLiveGame(State.liveGame);
+      }
+    }
+  });
+
+  window.addEventListener('pagehide', () => {
+    if (State.liveGame) {
+      if (State.liveGame.isRunning) gameTick();
+      Store.saveLiveGame(State.liveGame);
+    }
+  });
+
   // Navigation
   UI.navItems.forEach(item => {
     item.addEventListener('click', (e) => {
@@ -97,7 +131,11 @@ function setupEventListeners() {
 
   // Match summary
   document.getElementById('btn-discard-match').addEventListener('click', () => {
+    if (State.liveGame && State.liveGame.intervalId) {
+      clearInterval(State.liveGame.intervalId);
+    }
     State.liveGame = null;
+    Store.clearLiveGame();
     closeModals();
     switchView('view-games');
   });
@@ -240,6 +278,27 @@ window.deletePlayer = (id) => {
 function startNewGameFlow() {
   if (State.liveGame) {
     switchView('view-live-game');
+    if (State.liveGame.isRunning || State.liveGame.matchTimeSeconds > 0) {
+      UI.liveSetup.classList.add('hidden');
+      UI.liveActive.classList.remove('hidden');
+      updateLiveUI();
+      updateTimerUI();
+      document.getElementById('timer-icon').textContent = State.liveGame.isRunning ? 'pause' : 'play_arrow';
+    } else {
+      UI.liveSetup.classList.remove('hidden');
+      UI.liveActive.classList.add('hidden');
+      UI.liveSetupRoster.innerHTML = State.players.map(p => {
+        const livePlayer = State.liveGame.players.find(x => x.id === p.id);
+        const isActive = livePlayer ? livePlayer.isActive : false;
+        return `
+          <div class="setup-player-toggle ${isActive ? 'selected' : ''}" data-id="${p.id}" onclick="toggleStartingPlayer('${p.id}')">
+            <div style="font-weight:500;">#${p.number || '-'} ${p.name}</div>
+            <span class="material-icons-round check-icon" style="color:${isActive ? 'var(--success-color)' : 'var(--text-secondary)'}">${isActive ? 'check_circle' : 'radio_button_unchecked'}</span>
+          </div>
+        `;
+      }).join('');
+      checkStartingLineup();
+    }
     return;
   }
 
@@ -268,6 +327,7 @@ function startNewGameFlow() {
     matchTimeSeconds: 0,
     isRunning: false,
     intervalId: null,
+    lastTick: null,
     players: State.players.map(p => ({
       id: p.id,
       name: p.name,
@@ -277,6 +337,7 @@ function startNewGameFlow() {
       goals: 0
     }))
   };
+  Store.saveLiveGame(State.liveGame);
   checkStartingLineup();
 }
 
@@ -297,6 +358,7 @@ window.toggleStartingPlayer = (pid) => {
     }
   }
   checkStartingLineup();
+  Store.saveLiveGame(State.liveGame);
 };
 
 function checkStartingLineup() {
@@ -305,22 +367,35 @@ function checkStartingLineup() {
   UI.btnStartMatch.textContent = `Start Match (${activeCount} starting)`;
 }
 
+function gameTick() {
+  if (!State.liveGame || !State.liveGame.isRunning) return;
+  const now = Date.now();
+  const deltaSeconds = Math.floor((now - State.liveGame.lastTick) / 1000);
+  
+  if (deltaSeconds > 0) {
+    State.liveGame.matchTimeSeconds += deltaSeconds;
+    State.liveGame.players.forEach(p => {
+      if (p.isActive) p.secondsPlayed += deltaSeconds;
+    });
+    State.liveGame.lastTick += deltaSeconds * 1000;
+    
+    updateTimerUI();
+    Store.saveLiveGame(State.liveGame);
+  }
+}
+
 function startMatchTimer() {
   UI.liveSetup.classList.add('hidden');
   UI.liveActive.classList.remove('hidden');
   State.liveGame.isRunning = true;
+  State.liveGame.lastTick = Date.now();
   updateLiveUI();
+  Store.saveLiveGame(State.liveGame);
   
   // Start heartbeat
-  State.liveGame.intervalId = setInterval(() => {
-    if (State.liveGame.isRunning) {
-      State.liveGame.matchTimeSeconds++;
-      State.liveGame.players.forEach(p => {
-        if (p.isActive) p.secondsPlayed++;
-      });
-      updateTimerUI();
-    }
-  }, 1000);
+  if (!State.liveGame.intervalId) {
+    State.liveGame.intervalId = setInterval(gameTick, 1000);
+  }
 }
 
 function formatTime(totalSeconds) {
@@ -339,8 +414,15 @@ function updateTimerUI() {
 }
 
 function toggleMatchTimer() {
-  State.liveGame.isRunning = !State.liveGame.isRunning;
+  if (State.liveGame.isRunning) {
+    gameTick(); // capture final seconds
+    State.liveGame.isRunning = false;
+  } else {
+    State.liveGame.isRunning = true;
+    State.liveGame.lastTick = Date.now();
+  }
   document.getElementById('timer-icon').textContent = State.liveGame.isRunning ? 'pause' : 'play_arrow';
+  Store.saveLiveGame(State.liveGame);
 }
 
 function updateLiveUI() {
@@ -373,6 +455,7 @@ window.subPlayer = (pid) => {
   if (p) {
     p.isActive = !p.isActive;
     updateLiveUI();
+    Store.saveLiveGame(State.liveGame);
   }
 };
 
@@ -381,6 +464,7 @@ window.addGoal = (pid) => {
   if (p) {
     p.goals++;
     updateLiveUI();
+    Store.saveLiveGame(State.liveGame);
   }
 };
 
@@ -389,13 +473,16 @@ window.removeGoal = (pid) => {
   if (p && p.goals > 0) {
     p.goals--;
     updateLiveUI();
+    Store.saveLiveGame(State.liveGame);
   }
 };
 
 function confirmEndMatch() {
   if (confirm('Are you sure you want to end this match?')) {
-    clearInterval(State.liveGame.intervalId);
+    if (State.liveGame.intervalId) clearInterval(State.liveGame.intervalId);
+    if (State.liveGame.isRunning) gameTick();
     State.liveGame.isRunning = false;
+    Store.saveLiveGame(State.liveGame);
     
     // Show Summary
     UI.modalBackdrop.classList.remove('hidden');
@@ -429,6 +516,7 @@ function saveMatch() {
   Store.saveGames(State.games);
   
   State.liveGame = null;
+  Store.clearLiveGame();
   closeModals();
   switchView('view-games');
 }
